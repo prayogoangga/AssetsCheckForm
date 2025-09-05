@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>Form Stock Take Asset — Upload Excel (v1.2)</title>
+  <style>
+    :root {
+      --bg: #0f172a; /* slate-900 */
+      --panel: #111827; /* gray-900 */
+      --text: #e5e7eb; /* gray-200 */
+      --muted: #9ca3af; /* gray-400 */
+      --accent: #22c55e; /* green-500 */
+      --warn: #f59e0b; /* amber-500 */
+      --danger: #ef4444; /* red-500 */
+      --blue: #3b82f6; /* blue-500 */
+      --border: #1f2937; /* gray-800 */
+      --glass: rgba(17,24,39,0.6);
+      --thead: rgba(17,24,39,0.85);
+    }
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --panel: #ffffff;
+      --text: #0f172a;
+      --muted: #475569;
+      --accent: #16a34a;
+      --warn: #d97706;
+      --danger: #dc2626;
+      --blue: #2563eb;
+      --border: #e5e7eb;
+      --glass: rgba(255,255,255,0.7);
+      --thead: rgba(255,255,255,0.9);
+    }
+    html, body { height:100%; }
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; background: var(--bg); color: var(--text); margin:0; }
+    .container { max-width: 1100px; margin: 24px auto; padding: 0 16px; }
+    h1 { font-size: 20px; margin: 0 0 6px; }
+    h2 { font-size: 14px; font-weight: 500; margin: 0; color: var(--muted); }
+
+    .bar { position: sticky; top: 0; z-index: 50; backdrop-filter: saturate(180%) blur(8px); -webkit-backdrop-filter: saturate(180%) blur(8px); background: var(--glass); border-bottom: 1px solid var(--border); }
+    .bar-inner { display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; padding: 12px 0; }
+
+    .row { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom: 12px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+    label { font-size: 12px; color: var(--muted); display:block; margin-bottom: 6px; }
+
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
+      background:#0000; color: var(--text); border:1px solid var(--border); padding:12px 14px; border-radius:10px; outline: none; min-width: 160px;
+    }
+    input[type="number"] { width:140px; }
+    input[type="file"] { color: var(--text); }
+    button { background: var(--blue); color:white; border:none; padding:12px 16px; border-radius:10px; cursor:pointer; min-height:44px; }
+    button.secondary { background:#0000; color: var(--text); border:1px solid var(--border); }
+    button.warn { background: var(--warn); }
+    button.danger { background: var(--danger); }
+    .pill { font-size:12px; padding:8px 12px; border-radius:999px; border:1px solid var(--border); }
+    .stat { color: var(--muted); font-size: 13px; }
+
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom:1px solid var(--border); padding: 10px 10px; text-align:left; font-size: 13px; vertical-align: top; }
+    th { color: var(--muted); font-weight:600; position: sticky; top: 0; background: var(--thead); z-index:1; backdrop-filter: saturate(180%) blur(6px); -webkit-backdrop-filter: saturate(180%) blur(6px); }
+    .table-wrap { max-height: 52vh; overflow:auto; border: 1px solid var(--border); border-radius: 12px; }
+    .ok { color: var(--accent); }
+    .bad { color: var(--danger); }
+    .hidden { display:none !important; }
+    .flex-1 { flex:1; min-width:240px; }
+    .right { text-align:right; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .footer { color: var(--muted); font-size:12px; text-align:center; margin:14px 0; }
+
+    /* Scanner overlay */
+    .scanner { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: grid; place-items: center; z-index: 1000; padding: max(env(safe-area-inset-top),16px) 12px max(env(safe-area-inset-bottom),16px); }
+    .scanner-panel { width: min(680px, 96vw); background: var(--panel); border:1px solid var(--border); border-radius:14px; padding:12px; }
+    .scanner video { width: 100%; max-height: 60vh; background: #000; border-radius: 10px; }
+    .scanner-grid { position: relative; }
+    .scan-line { position:absolute; left:4%; right:4%; height:2px; background: #22c55e; animation: scan 1.8s linear infinite; box-shadow: 0 0 12px 2px rgba(34,197,94,0.75); }
+    @keyframes scan { 0% { top: 10%; } 100% { top: 85%; } }
+
+    /* Mobile-first improvements */
+    @media (max-width: 640px) {
+      .container { padding: 0 10px; }
+      .row { flex-direction: column; align-items: stretch; }
+      input[type="text"], input[type="number"], input[type="date"], select, textarea, button { width: 100%; }
+      .flex-1 { min-width: unset; }
+      .pill { width: 100%; }
+      .table-wrap { overflow-x: auto; max-height: 44vh; }
+      .sm-hide { display: none; }
+      h2 { font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <div class="bar">
+      <div class="bar-inner">
+        <div>
+          <h1>Form Stock Take Asset — Upload Excel (v1.2)</h1>
+          <h2>1) Upload Excel → 2) <b>Scan QR</b>/Ketik Kode Asset → 3) Tambah → 4) Export CSV</h2>
+        </div>
+        <div class="row" style="margin:0;">
+          <label style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="themeToggle" />
+            <span class="stat">Theme: <b><span id="themeLabel">Dark</span></b></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:12px;">
+      <div class="row">
+        <div class="flex-1">
+          <label>Pilih File Excel / CSV</label>
+          <input type="file" id="file" accept=".xlsx,.xls,.csv" />
+          <div class="stat" id="fileStatus">Belum ada file terunggah.</div>
+        </div>
+        <div>
+          <label>Sheet</label>
+          <select id="sheet"></select>
+        </div>
+        <div>
+          <label>&nbsp;</label>
+          <button id="reloadSheet" class="secondary">Muat Ulang Sheet</button>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="flex-1">
+          <label>Kode Asset</label>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input list="kodeList" id="kode" class="mono" placeholder="scan/ketik: ITE00SGR001" />
+            <button id="scanBtn" class="secondary" title="Scan QR (Kamera)">Scan QR</button>
+          </div>
+          <datalist id="kodeList"></datalist>
+          <!-- Fallback foto untuk perangkat tanpa live scan -->
+          <input type="file" id="photoScan" accept="image/*" capture="environment" class="hidden" />
+        </div>
+        <div>
+          <label>Status Check</label>
+          <select id="statusCheck">
+            <option value="Ada">Ada</option>
+            <option value="Tidak Ada">Tidak Ada</option>
+            <option value="Dipindahkan">Dipindahkan</option>
+            <option value="Rusak">Rusak</option>
+          </select>
+        </div>
+        <div>
+          <label>Qty Dihitung</label>
+          <input type="number" id="qty" step="1" min="0" value="1" />
+          <div class="stat" id="qtyInfo" style="margin-top:6px;">Master: — • Dihitung: — • Sisa: — • Delta: —</div>
+        </div>
+        <div>
+          <label>Lokasi Baru (jika dipindah)</label>
+          <input type="text" id="lokasiBaru" placeholder="misal: Denpasar / Room A" />
+        </div>
+        <div>
+          <label>Kondisi (opsional)</label>
+          <select id="kondisi">
+            <option value="">—</option>
+            <option>Baik</option>
+            <option>Perlu Perbaikan</option>
+            <option>Rusak</option>
+          </select>
+        </div>
+        <div class="flex-1">
+          <label>Catatan (opsional)</label>
+          <input type="text" id="note" placeholder="SN beda, accu lemah, dll" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="add">Tambah ke List</button>
+        <button id="clear" class="secondary">Bersihkan</button>
+      </div>
+
+      <div class="row">
+        <div class="pill">Item Name: <b id="v_nama">—</b></div>
+        <div class="pill">Asset Type: <b id="v_type">—</b></div>
+        <div class="pill">Model: <b id="v_model">—</b></div>
+        <div class="pill">Serial Number: <b id="v_sn">—</b></div>
+        <div class="pill sm-hide">Location: <b id="v_loc">—</b></div>
+        <div class="pill sm-hide">Room: <b id="v_room">—</b></div>
+        <div class="pill">Master Unit: <b id="v_master">—</b></div>
+      </div>
+
+      <div class="row" style="align-items:center;">
+        <div class="stat" id="summary">0 item • 0 kode termuat</div>
+        <div style="flex:1"></div>
+        <div class="stat">
+          <span>Sudah distock: <b><span id="doneCount">0</span>/<span id="totalCount">0</span></b></span>
+          • <span>Belum: <b><span id="pendingCount">0</span>/<span id="totalCount2">0</span></b></span>
+        </div>
+        <div style="flex:1"></div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; width:100%; max-width:420px; margin-left:auto;">
+          <button id="export" class="pill" style="flex:1;">Export CSV</button>
+          <button id="showPending" class="pill secondary" style="flex:1;">Tampilkan Belum Distock</button>
+          <button id="exportPending" class="pill secondary" style="flex:1;">Export Belum Distock</button>
+          <button id="reset" class="pill danger" style="flex:1;">Reset List</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pendingContainer" class="hidden">
+      <h3 style="margin:16px 0 8px;">Daftar <b>Belum Distock</b> — item dalam dataset yang belum masuk ke List.</h3>
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>Filter Lokasi</label>
+            <input type="text" id="filterLoc" placeholder="ketik lokasi untuk filter" />
+          </div>
+          <div>
+            <label>Filter Kategori/Type</label>
+            <input type="text" id="filterType" placeholder="IT ASSET, Furniture, dll" />
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="tblPending">
+            <thead>
+              <tr>
+                <th>Kode Asset</th>
+                <th>Asset Name</th>
+                <th>Jumlah Unit</th>
+                <th>Location</th>
+                <th class="sm-hide">Room</th>
+                <th>Type</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <div class="table-wrap">
+        <table id="tbl">
+          <thead>
+            <tr>
+              <th>Kode Asset</th>
+              <th>Asset Name</th>
+              <th>Qty Dihitung</th>
+              <th>Jumlah Unit (Master)</th>
+              <th>Delta</th>
+              <th>Status Check</th>
+              <th>Kondisi</th>
+              <th class="sm-hide">Serial</th>
+              <th>Lokasi</th>
+              <th class="sm-hide">Room</th>
+              <th class="sm-hide">Catatan</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="footer">📅 Tanggal Stock: <input type="date" id="tgl" /> • created for internal use</div>
+  </div>
+
+  <!-- Scanner Overlay -->
+  <div id="scanner" class="scanner hidden" aria-hidden="true">
+    <div class="scanner-panel">
+      <div class="scanner-grid">
+        <video id="video" playsinline muted></video>
+        <div class="scan-line"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <div class="stat" id="scanTips">
+          Tips: Pastikan izin kamera diizinkan. Gunakan koneksi <b>HTTPS</b> agar kamera bisa diakses. Arahkan QR ke dalam frame.
+        </div>
+        <div style="display:flex; gap:8px; margin-left:auto;">
+          <button id="closeScanner" class="secondary">Tutup</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SheetJS for parsing Excel in-browser -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script>
+  // ===== Utilities =====
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+  const state = {
+    theme: localStorage.getItem('asset_theme') || 'dark',
+    raw: {}, // sheetName -> rows
+    rows: [], // active sheet rows (normalized)
+    list: [], // stock list entries
+    kodeIndex: new Map(),
+    sheetName: '',
+    pendingView: false,
+    fingerprint: '',
+    liveScanSupported: false,
+    scanning: false,
+    stream: null,
+    detector: null,
+  };
+
+  function save() {
+    const key = 'asset_stock_list_' + state.fingerprint;
+    localStorage.setItem(key, JSON.stringify(state.list));
+  }
+  function load() {
+    const key = 'asset_stock_list_' + state.fingerprint;
+    const s = localStorage.getItem(key);
+    if (s) { try { state.list = JSON.parse(s) || []; } catch(_){} }
+  }
+
+  function normalizeHeader(h){
+    return String(h||'').trim().toLowerCase();
+  }
+
+  function normalizeRow(r){
+    // map headers expected from Data Aset.xlsx
+    const obj = {};
+    for (const k in r){ obj[normalizeHeader(k)] = r[k]; }
+    return {
+      kode: obj['kode asset']||'',
+      name: obj['asset name']||'',
+      type: obj['asset type']||'',
+      category: obj['category']||'',
+      manuf: obj['manufacturer']||'',
+      model: obj['asset model']||obj['model']||'',
+      sn: obj['serial number']||'',
+      costcenter: obj['asset cost center']||'',
+      unit: parseNumber(obj['jumlah unit']),
+      location: obj['asset location']||'',
+      status: obj['asset status']||'',
+      room: obj['room code']||'',
+      replaceYear: obj['replacement year']||'',
+      purchase: obj['purchase device']||'',
+      statusCheck: (obj['status check']||obj['status check ']||'').toString().trim(),
+      remarks: obj['remarks']||'',
+    };
+  }
+
+  function parseNumber(v){
+    const n = Number(String(v||'').replace(/[^0-9.-]/g,''));
+    return isFinite(n) ? n : 0;
+  }
+
+  function updateSummary(){
+    $('#summary').textContent = `${state.rows.length} item • ${state.kodeIndex.size} kode termuat`;
+    const done = new Set(state.list.map(x=>x.kode));
+    const total = state.kodeIndex.size;
+    $('#doneCount').textContent = String(done.size);
+    $('#totalCount').textContent = String(total);
+    $('#pendingCount').textContent = String(Math.max(0,total - done.size));
+    $('#totalCount2').textContent = String(total);
+  }
+
+  function renderKodeList(){
+    const dl = $('#kodeList'); dl.innerHTML = '';
+    for (const k of state.kodeIndex.keys()){
+      const opt = document.createElement('option'); opt.value = k; dl.appendChild(opt);
+    }
+  }
+
+  function findByKode(kode){
+    return state.rows.find(r => String(r.kode).trim().toLowerCase() === String(kode).trim().toLowerCase());
+  }
+
+  function showPreview(kode){
+    const r = findByKode(kode);
+    $('#v_nama').textContent = r? r.name : '—';
+    $('#v_type').textContent = r? (r.type || r.category) : '—';
+    $('#v_model').textContent = r? r.model : '—';
+    $('#v_sn').textContent = r? r.sn : '—';
+    $('#v_loc').textContent = r? r.location : '—';
+    $('#v_room').textContent = r? r.room : '—';
+    $('#v_master').textContent = r? (r.unit || 0) : '—';
+    updateQtyInfo();
+  }
+
+  function updateQtyInfo(){
+    const kode = $('#kode').value.trim();
+    const base = findByKode(kode);
+    const st = $('#statusCheck').value;
+    let q = parseNumber($('#qty').value);
+    if (st === 'Tidak Ada') q = 0;
+    const master = base? (base.unit || 0) : 0;
+    const sisa = Math.max(master - q, 0);
+    const delta = q - master;
+    $('#qtyInfo').textContent = `Master: ${base? master: '—'} • Dihitung: ${base? q:'—'} • Sisa: ${base? sisa:'—'} • Delta: ${base? delta:'—'}`;
+  }
+
+  function addToList(){
+    const kode = $('#kode').value.trim(); if(!kode){ alert('Masukkan Kode Asset.'); return; }
+    const base = findByKode(kode); if(!base){ alert('Kode tidak ditemukan di dataset.'); return; }
+    const st = $('#statusCheck').value;
+    const kd = $('#kondisi').value;
+    const locBaru = $('#lokasiBaru').value.trim();
+    const note = $('#note').value.trim();
+    const tgl = $('#tgl').value || new Date().toISOString().slice(0,10);
+
+    // if Tidak Ada ⇒ qty = 0
+    let qty = parseNumber($('#qty').value);
+    if(st === 'Tidak Ada') qty = 0;
+
+    // replace existing entry for same kode
+    state.list = state.list.filter(x => x.kode.toLowerCase() !== kode.toLowerCase());
+
+    const delta = qty - (base.unit||0);
+    state.list.push({
+      kode: base.kode,
+      name: base.name,
+      qty: qty,
+      unit: base.unit,
+      delta: delta,
+      statusCheck: st,
+      kondisi: kd,
+      serial: base.sn,
+      lokasi: base.location,
+      room: base.room,
+      lokasiBaru: locBaru,
+      note,
+      tanggal: tgl,
+      ts: new Date().toISOString(),
+    });
+
+    save();
+    renderTable();
+    renderPending();
+    updateSummary();
+
+    // convenience: clear only qty & note
+    $('#qty').value = 1; $('#note').value=''; $('#kode').focus(); updateQtyInfo();
+  }
+
+  function removeRow(kode){
+    state.list = state.list.filter(x => x.kode !== kode);
+    save(); renderTable(); renderPending(); updateSummary();
+  }
+
+  function renderTable(){
+    const tb = $('#tbl tbody'); tb.innerHTML = '';
+    for(const r of state.list){
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${r.kode}</td>
+        <td>${r.name||''}</td>
+        <td class="right">${r.qty}</td>
+        <td class="right">${r.unit}</td>
+        <td class="right ${r.delta===0? 'ok':''} ${r.delta!==0? 'bad':''}">${r.delta}</td>
+        <td>${r.statusCheck||''}</td>
+        <td>${r.kondisi||''}</td>
+        <td class="mono sm-hide">${r.serial||''}</td>
+        <td>${r.lokasi||''}${r.lokasiBaru? ' → '+r.lokasiBaru: ''}</td>
+        <td class="sm-hide">${r.room||''}</td>
+        <td class="sm-hide">${r.note||''}</td>
+        <td><button class="secondary" data-del="${r.kode}">Hapus</button></td>`;
+      tb.appendChild(tr);
+    }
+    // bind delete
+    $$('#tbl [data-del]').forEach(b=> b.addEventListener('click', (e)=> removeRow(e.target.getAttribute('data-del'))));
+  }
+
+  function renderPending(){
+    const doneSet = new Set(state.list.map(x=>x.kode.toLowerCase()));
+    const filterLoc = $('#filterLoc')? $('#filterLoc').value.trim().toLowerCase(): '';
+    const filterType = $('#filterType')? $('#filterType').value.trim().toLowerCase(): '';
+    const pb = $('#tblPending tbody'); if(!pb) return; pb.innerHTML = '';
+
+    let count = 0;
+    for(const r of state.rows){
+      if(doneSet.has(String(r.kode).toLowerCase())) continue;
+      if(filterLoc && !String(r.location||'').toLowerCase().includes(filterLoc)) continue;
+      const typeStr = (r.type||'') + ' ' + (r.category||'');
+      if(filterType && !typeStr.toLowerCase().includes(filterType)) continue;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="mono">${r.kode}</td>
+        <td>${r.name||''}</td>
+        <td class="right">${r.unit||0}</td>
+        <td>${r.location||''}</td>
+        <td class="sm-hide">${r.room||''}</td>
+        <td>${r.type||r.category||''}</td>
+        <td>${r.status||''}</td>`;
+      pb.appendChild(tr);
+      count++;
+    }
+    if(count===0){
+      const tr = document.createElement('tr'); tr.innerHTML = `<td colspan="7" class="stat">Semua item sudah dicek atau tidak ada yang cocok dengan filter.</td>`; pb.appendChild(tr);
+    }
+  }
+
+  function exportCSV(rows, filename){
+    const headers = Object.keys(rows[0]||{Keterangan:''});
+    const csv = [headers.join(',')].concat(rows.map(r=> headers.map(h => '"'+String(r[h]??'').replaceAll('"','""')+'"').join(','))).join('\n');
+    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; a.click();
+  }
+
+  function doExport(){
+    if(state.list.length===0){ alert('Belum ada data untuk diexport.'); return; }
+    const rows = state.list.map(r=> ({
+      Tanggal: r.tanggal,
+      'Kode Asset': r.kode,
+      'Asset Name': r.name,
+      'Qty Dihitung': r.qty,
+      'Jumlah Unit (Master)': r.unit,
+      Delta: r.delta,
+      'Status Check': r.statusCheck,
+      Kondisi: r.kondisi,
+      'Serial Number': r.serial,
+      Location: r.lokasi,
+      Room: r.room,
+      'Lokasi Baru': r.lokasiBaru,
+      Catatan: r.note,
+      Timestamp: r.ts,
+    }));
+    exportCSV(rows, `stock_asset_result_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function doExportPending(){
+    const doneSet = new Set(state.list.map(x=>x.kode.toLowerCase()));
+    const rows = state.rows.filter(r=> !doneSet.has(String(r.kode).toLowerCase())).map(r=> ({
+      'Kode Asset': r.kode,
+      'Asset Name': r.name,
+      'Jumlah Unit': r.unit,
+      Location: r.location,
+      Room: r.room,
+      'Asset Type': r.type,
+      Category: r.category,
+      'Asset Status': r.status,
+    }));
+    if(rows.length===0){ alert('Tidak ada item pending.'); return; }
+    exportCSV(rows, `stock_asset_pending_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function resetList(){
+    if(!confirm('Hapus semua entri list?')) return;
+    state.list = []; save(); renderTable(); renderPending(); updateSummary();
+  }
+
+  function setTheme(theme){
+    state.theme = theme; document.documentElement.setAttribute('data-theme', theme==='light'?'light':'dark');
+    $('#themeToggle').checked = theme==='light';
+    $('#themeLabel').textContent = theme==='light'? 'Light':'Dark';
+    localStorage.setItem('asset_theme', state.theme);
+    // Set theme-color for mobile address bar
+    const meta = document.querySelector('meta[name="theme-color"]');
+    meta && meta.setAttribute('content', theme==='light' ? '#ffffff' : '#0f172a');
+  }
+
+  // ===== Excel Parsing =====
+  $('#file').addEventListener('change', async (e)=>{
+    const f = e.target.files[0]; if(!f) return;
+    $('#fileStatus').textContent = `Memuat: ${f.name}…`;
+
+    const data = await f.arrayBuffer();
+    const wb = XLSX.read(data, {type:'array'});
+
+    // build sheet options
+    const shSel = $('#sheet'); shSel.innerHTML = '';
+    wb.SheetNames.forEach((name)=>{
+      const opt = document.createElement('option'); opt.value = name; opt.textContent = name; if(name.toLowerCase()==='sheet2') opt.selected=true; shSel.appendChild(opt);
+    });
+
+    state.raw = {};
+    for (const name of wb.SheetNames){
+      const ws = wb.Sheets[name];
+      const json = XLSX.utils.sheet_to_json(ws, {defval:'', raw:false});
+      state.raw[name] = json;
+    }
+
+    $('#fileStatus').textContent = `File termuat. Pilih sheet (total ${wb.SheetNames.length}).`;
+
+    loadSheet();
+  });
+
+  function loadSheet(){
+    const name = $('#sheet').value; state.sheetName = name;
+    const rows = (state.raw[name]||[]).map(normalizeRow).filter(r=> r.kode);
+    state.rows = rows;
+    state.kodeIndex = new Map(rows.map(r=> [String(r.kode), r]));
+
+    // set fingerprint for localStorage (dataset identity)
+    state.fingerprint = `${name}_${state.rows.length}`;
+    load();
+
+    renderKodeList();
+    renderPending();
+    renderTable();
+    updateSummary();
+
+    if(!$('#tgl').value) $('#tgl').value = new Date().toISOString().slice(0,10);
+  }
+
+  $('#reloadSheet').addEventListener('click', loadSheet);
+  $('#sheet').addEventListener('change', loadSheet);
+
+  // ===== Interactions =====
+  $('#kode').addEventListener('input', ()=> { showPreview($('#kode').value); });
+  $('#qty').addEventListener('input', updateQtyInfo);
+  $('#statusCheck').addEventListener('change', ()=>{
+    const st = $('#statusCheck').value; const qty = $('#qty');
+    if(st==='Tidak Ada'){ qty.value = 0; qty.disabled = true; }
+    else { if(Number(qty.value)===0) qty.value = 1; qty.disabled = false; }
+    updateQtyInfo();
+  });
+  $('#add').addEventListener('click', addToList);
+  $('#clear').addEventListener('click', ()=>{ $('#kode').value=''; $('#qty').value=1; $('#note').value=''; $('#lokasiBaru').value=''; showPreview(''); $('#kode').focus(); });
+  $('#export').addEventListener('click', doExport);
+  $('#exportPending').addEventListener('click', doExportPending);
+  $('#reset').addEventListener('click', resetList);
+  $('#filterLoc') && $('#filterLoc').addEventListener('input', renderPending);
+  $('#filterType') && $('#filterType').addEventListener('input', renderPending);
+
+  // Toggle pending section show/hide
+  $('#showPending').addEventListener('click', ()=>{
+    state.pendingView = !state.pendingView;
+    const el = $('#pendingContainer');
+    if(state.pendingView){ el.classList.remove('hidden'); $('#showPending').textContent = 'Sembunyikan Belum Distock'; }
+    else { el.classList.add('hidden'); $('#showPending').textContent = 'Tampilkan Belum Distock'; }
+  });
+
+  // Theme
+  $('#themeToggle').addEventListener('change', (e)=> setTheme(e.target.checked ? 'light':'dark'));
+  setTheme(state.theme);
+
+  // Keyboard: Enter to add when on input fields
+  document.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' && document.activeElement && ['kode','qty','statusCheck','kondisi','lokasiBaru','note'].includes(document.activeElement.id)){
+      e.preventDefault(); addToList();
+    }
+  });
+
+  // Initial preview blank
+  showPreview('');
+  updateQtyInfo();
+
+  // ====== QR Scanner (Mobile-friendly) ======
+  async function initDetector(){
+    if (!window.isSecureContext) {
+      state.liveScanSupported = false; // getUserMedia normally requires HTTPS
+      return;
+    }
+    if ('BarcodeDetector' in window) {
+      try{
+        const formats = ['qr_code']; // QR only
+        state.detector = new window.BarcodeDetector({ formats });
+        if (state.detector && typeof state.detector.detect === 'function') {
+          state.liveScanSupported = true;
+        }
+      }catch(err){ state.liveScanSupported = false; }
+    }
+  }
+  initDetector();
+
+  function isLocalhost(){
+    return ['localhost','127.0.0.1','::1'].includes(location.hostname);
+  }
+
+  function ensureSecure(){
+    if (window.isSecureContext || isLocalhost()) return true;
+    alert('Untuk memakai kamera secara langsung, halaman harus dibuka melalui HTTPS atau di localhost. Akan dialihkan ke mode foto sebagai fallback.');
+    return false;
+  }
+
+  async function startScanner(){
+    if (!ensureSecure() || !state.liveScanSupported) { // fallback ke foto
+      $('#photoScan').click();
+      return;
+    }
+    $('#scanner').classList.remove('hidden');
+    $('#scanner').setAttribute('aria-hidden','false');
+
+    // iOS Safari tidak mendukung navigator.permissions('camera') secara konsisten, jadi kita langsung minta getUserMedia di gesture ini
+    try{
+      const videoConstraints = { facingMode: { ideal: 'environment' } };
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+      state.stream = stream;
+      const video = $('#video');
+      video.setAttribute('playsinline','');
+      video.muted = true;
+      video.srcObject = stream; await video.play();
+      state.scanning = true;
+      scanLoop();
+    }catch(err){
+      handleCameraError(err);
+      closeScanner();
+    }
+  }
+
+  function handleCameraError(err){
+    let msg = 'Gagal mengakses kamera.';
+    if(err && err.name){
+      if(err.name === 'NotAllowedError' || err.name === 'SecurityError') msg = 'Izin kamera ditolak. Buka Pengaturan browser → Izinkan Kamera untuk situs ini.';
+      else if(err.name === 'NotFoundError' || err.name === 'OverconstrainedError') msg = 'Kamera tidak ditemukan/tersedia. Coba pilih kamera lain atau pastikan perangkat memiliki kamera belakang.';
+      else if(err.name === 'NotReadableError') msg = 'Kamera sedang dipakai aplikasi lain. Tutup aplikasi kamera/meeting lalu coba lagi.';
+      else if(err.name === 'TypeError') msg = 'Permintaan kamera dibatalkan. Coba ulangi.';
+    }
+    alert(msg + '\n\nDetail: ' + (err && err.message ? err.message : '')); 
+  }
+
+  async function scanLoop(){
+    const video = $('#video');
+    if(!state.scanning || video.readyState < 2) { requestAnimationFrame(scanLoop); return; }
+    try{
+      const dets = await state.detector.detect(video);
+      if(dets && dets.length){
+        const raw = dets[0].rawValue || dets[0].raw || '';
+        onBarcodeFound(raw);
+        return;
+      }
+    }catch(err){ /* continue */ }
+    if(state.scanning) requestAnimationFrame(scanLoop);
+  }
+
+  function extractKodeFromText(text){
+    const t = String(text||'').trim();
+    if (!t) return '';
+    // 1) Jika persis cocok
+    if (state.kodeIndex.has(t)) return t;
+    // 2) Jika QR berisi key=value (misal: kode=ITE00SGR001)
+    const m1 = t.match(/kode\s*[:=]\s*([A-Za-z0-9_-]+)/i);
+    if (m1 && state.kodeIndex.has(m1[1])) return m1[1];
+    // 3) Cari kode yang muncul sebagai substring
+    for (const k of state.kodeIndex.keys()){
+      if (t.toLowerCase().includes(String(k).toLowerCase())) return k;
+    }
+    // 4) Fallback: ambil token alfanumerik >= 6
+    const m2 = t.match(/[A-Z0-9]{6,}/i);
+    return m2 ? m2[0].toUpperCase() : '';
+  }
+
+  function onBarcodeFound(value){
+    const codeRaw = String(value||'').trim();
+    const code = extractKodeFromText(codeRaw);
+    if(!code){ alert('QR terbaca tetapi Kode Asset tidak dikenali. Isi QR: ' + codeRaw); closeScanner(); return; }
+
+    $('#kode').value = code;
+    showPreview(code);
+    updateQtyInfo();
+    closeScanner();
+
+    const base = findByKode(code);
+    if(!base) {
+      alert(`Kode ${code} tidak ditemukan pada dataset.`);
+      $('#kode').focus();
+    } else {
+      $('#qty').focus();
+    }
+  }
+
+  function closeScanner(){
+    state.scanning = false;
+    const video = $('#video');
+    if(video && video.srcObject){
+      const tracks = video.srcObject.getTracks(); tracks.forEach(t=>t.stop());
+      video.srcObject = null;
+    }
+    if(state.stream){ state.stream.getTracks().forEach(t=>t.stop()); state.stream = null; }
+    $('#scanner').classList.add('hidden');
+    $('#scanner').setAttribute('aria-hidden','true');
+  }
+
+  // Photo fallback detect (QR only)
+  $('#photoScan').addEventListener('change', async (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file){ return; }
+    if(!('BarcodeDetector' in window)){
+      alert('Deteksi QR dari foto tidak didukung pada browser ini. Silakan ketik manual.');
+      return;
+    }
+    try{
+      const detector = new BarcodeDetector({ formats: ['qr_code'] });
+      const bmp = await createImageBitmap(file);
+      const dets = await detector.detect(bmp);
+      if(dets && dets.length){ onBarcodeFound(dets[0].rawValue || ''); }
+      else alert('QR tidak terdeteksi dari foto. Coba ulangi dengan pencahayaan cukup.');
+    }catch(err){ alert('Gagal memproses gambar untuk QR. ' + (err && err.message ? err.message : '')); }
+    finally{ e.target.value = ''; }
+  });
+
+  $('#scanBtn').addEventListener('click', startScanner);
+  $('#closeScanner').addEventListener('click', closeScanner);
+
+  </script>
+</body>
+</html>
