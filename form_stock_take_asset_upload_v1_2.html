@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0f172a" />
-  <title>Form Stock Take Asset — Upload Excel (v1.2)</title>
+  <title>Form Stock Take Asset</title>
   <style>
     :root {
       --bg: #0f172a; /* slate-900 */
@@ -95,7 +95,7 @@
     <div class="bar">
       <div class="bar-inner">
         <div>
-          <h1>Form Stock Take Asset — Upload Excel (v1.2)</h1>
+          <h1>Form Stock Take Asset</h1>
           <h2>1) Upload Excel → 2) <b>Scan QR</b>/Ketik Kode Asset → 3) Tambah → 4) Export CSV</h2>
         </div>
         <div class="row" style="margin:0;">
@@ -123,12 +123,14 @@
           <button id="reloadSheet" class="secondary">Muat Ulang Sheet</button>
         </div>
       </div>
-
+    </div>
+    
+    <div class="card" style="margin-top:12px;">
       <div class="row">
         <div class="flex-1">
           <label>Kode Asset</label>
           <div style="display:flex; gap:8px; align-items:center;">
-            <input list="kodeList" id="kode" class="mono" placeholder="scan/ketik: ITE00SGR001" />
+            <input list="kodeList" id="kode" class="mono" placeholder="scan/ketik: ITE25SGR001" />
             <button id="scanBtn" class="secondary" title="Scan QR (Kamera)">Scan QR</button>
           </div>
           <datalist id="kodeList"></datalist>
@@ -146,9 +148,9 @@
         </div>
         <div>
           <label>Qty Dihitung</label>
+          <div class="stat" id="qtyInfo" style="margin-top:6px;">Qty: — • Fisik: — • Sisa: — • △: —</div>
           <input type="number" id="qty" step="1" min="0" value="1" />
-          <div class="stat" id="qtyInfo" style="margin-top:6px;">Master: — • Dihitung: — • Sisa: — • Delta: —</div>
-        </div>
+         </div>
         <div>
           <label>Lokasi Baru (jika dipindah)</label>
           <input type="text" id="lokasiBaru" placeholder="misal: Denpasar / Room A" />
@@ -182,7 +184,8 @@
         <div class="pill sm-hide">Room: <b id="v_room">—</b></div>
         <div class="pill">Master Unit: <b id="v_master">—</b></div>
       </div>
-
+    </div>
+    <div class="card" style="margin-top:14px;">
       <div class="row" style="align-items:center;">
         <div class="stat" id="summary">0 item • 0 kode termuat</div>
         <div style="flex:1"></div>
@@ -199,7 +202,7 @@
         </div>
       </div>
     </div>
-
+    
     <div id="pendingContainer" class="hidden">
       <h3 style="margin:16px 0 8px;">Daftar <b>Belum Distock</b> — item dalam dataset yang belum masuk ke List.</h3>
       <div class="card">
@@ -255,10 +258,15 @@
         </table>
       </div>
     </div>
-
-    <div class="footer">📅 Tanggal Stock: <input type="date" id="tgl" /> • created for internal use</div>
+<div class="card" style="margin-top:14px;">
+  <div>
+  <span>📅 Tanggal Stock:</span>
+  <input id="tgl" type="date" style="margin-left:8px;max-width:180px" />
+  </div>
+ 
   </div>
 
+  
   <!-- Scanner Overlay -->
   <div id="scanner" class="scanner hidden" aria-hidden="true">
     <div class="scanner-panel">
